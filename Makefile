@@ -24,7 +24,7 @@ release:
 $(BUILD_DIR):
 	mkdir -p $@
 
-$(BUILD_DIR)/libhurdygurdy.a: | $(BUILD_DIR)
+$(BUILD_DIR)/libhurdygurdy.a: $(SRC_DIR)/vendor/hurdygurdy | $(BUILD_DIR)
 	$(MAKE) -C $(SRC_DIR)/vendor/hurdygurdy CONFIG="$(CONFIG)"
 	cp $(SRC_DIR)/vendor/hurdygurdy/build/libhurdygurdy.a $(BUILD_DIR)/libhurdygurdy.a
 

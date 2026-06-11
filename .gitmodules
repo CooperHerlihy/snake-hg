@@ -1,0 +1,3 @@
+[submodule "vendor/hurdygurdy"]
+	path = vendor/hurdygurdy
+	url = https://github.com/CooperHerlihy/hurdygurdy

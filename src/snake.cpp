@@ -56,28 +56,7 @@ int main()
         if (hgWasQuit() || hgWindowWasClosed(window))
             goto quit;
 
-        camera.type = HgCameraType_orthographic;
-        camera.orthographic.left = 0;
-        camera.orthographic.right = width;
-        camera.orthographic.top = 0;
-        camera.orthographic.bottom = height;
-        camera.orthographic.near = 0;
-        camera.orthographic.far = 1;
-
-        f32 aspect = (f32)hgWindowWidth(window) / (f32)hgWindowHeight(window);
-        if (aspect > (f32)width / (f32)height)
-        {
-            f32 margin = aspect - (f32)width / (f32)height;
-            camera.orthographic.left -= margin * width / 2.0f;
-            camera.orthographic.right += margin * width / 2.0f;
-        }
-        else
-        {
-            f32 margin = (f32)hgWindowHeight(window) / (f32)hgWindowWidth(window) - 3.0f / 4.0f;
-            camera.orthographic.top -= margin * height / 2.0f;
-            camera.orthographic.bottom += margin * height / 2.0f;
-        }
-
+        hgCameraSetOrthographic(&camera, width, height, (f32)hgWindowWidth(window) / (f32)hgWindowHeight(window));
         hgCameraUpdate(&camera);
 
         if (hgIsButtonDown(window, HgButton_w) || hgIsButtonDown(window, HgButton_up))
@@ -175,18 +154,9 @@ int main()
 
             hgGpuRenderPassBegin(cmd, &pass);
 
-            hgGpuSetViewport(cmd, 0, 0, (f32)hgWindowWidth(window), (f32)hgWindowHeight(window));
-            hgGpuSetScissor(cmd, 0, 0, hgWindowWidth(window), hgWindowHeight(window));
-
             hgRenderLayer2D(cmd, &camera, &snakeLayer);
 
             hgGpuRenderPassEnd(cmd);
-
-            HgGpuImageBarrier presentBarrier{};
-            presentBarrier.image = hgWindowImageView(window);
-            presentBarrier.nextLayout = HgGpuLayout_presentSrc;
-
-            hgGpuMemoryBarrier(cmd, nullptr, 0, &presentBarrier, 1);
         }
         hgGpuFrameEnd(cmd);
     }

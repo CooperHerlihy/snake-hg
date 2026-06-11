@@ -26,28 +26,22 @@ int main()
     HgLayer2D snakeLayer = hgLayerCreate2D();
     hgDefer(hgLayerDestroy2D(&snakeLayer));
 
-    enum Point {
-        Point_empty = 0,
-        Point_snake,
-        Point_fruit,
-    };
-
     constexpr u32 width = 28;
     constexpr u32 height = 21;
-    Point points[width][height]{};
-    points[rng() % width][rng() % height] = Point_fruit;
 
-    struct Snake {
+    struct Point {
         i32 x, y;
-        i32 vx, vy;
     };
 
-    Snake head{20, 14, 1, 0};
+    Point head{width / 2, height / 2};
+    Point vel{1, 0};
 
-    HgQueue<Snake> snake = hgQueueCreate<Snake>();
-    hgDefer(hgQueueDestroy(&snake));
+    Point fruit{(i32)(rng() % width), (i32)(rng() % height)};
 
-    hgQueuePushBack(&snake, head);
+    HgArray<Point> snake = hgArrayCreate<Point>();
+    hgDefer(hgArrayDestroy(&snake));
+
+    *hgArrayPush(&snake) = head;
 
     f64 speed = 0.08f;
     f64 timeTilTick = speed;
@@ -88,34 +82,34 @@ int main()
 
         if (hgIsButtonDown(window, HgButton_w) || hgIsButtonDown(window, HgButton_up))
         {
-            if (head.vy != 1)
+            if (vel.y != 1)
             {
-                head.vx = 0;
-                head.vy = -1;
+                vel.x = 0;
+                vel.y = -1;
             }
         }
         else if (hgIsButtonDown(window, HgButton_a) || hgIsButtonDown(window, HgButton_left))
         {
-            if (head.vx != 1)
+            if (vel.x != 1)
             {
-                head.vx = -1;
-                head.vy = 0;
+                vel.x = -1;
+                vel.y = 0;
             }
         }
         else if (hgIsButtonDown(window, HgButton_s) || hgIsButtonDown(window, HgButton_down))
         {
-            if (head.vy != -1)
+            if (vel.y != -1)
             {
-                head.vx = 0;
-                head.vy = 1;
+                vel.x = 0;
+                vel.y = 1;
             }
         }
         else if (hgIsButtonDown(window, HgButton_d) || hgIsButtonDown(window, HgButton_right))
         {
-            if (head.vx != -1)
+            if (vel.x != -1)
             {
-                head.vx = 1;
-                head.vy = 0;
+                vel.x = 1;
+                vel.y = 0;
             }
         }
 
@@ -124,8 +118,8 @@ int main()
         {
             timeTilTick += speed;
 
-            head.x += head.vx;
-            head.y += head.vy;
+            head.x += vel.x;
+            head.y += vel.y;
 
             if (head.x < 0)
                 head.x += (i32)width;
@@ -137,50 +131,36 @@ int main()
             else if (head.y >= (i32)height)
                 head.y -= (i32)height;
 
-            Point p = points[head.x][head.y];
-            if (p == Point_snake)
-                goto quit;
-
-            hgQueuePushBack(&snake, head);
-            points[head.x][head.y] = Point_snake;
-
-            if (p == Point_fruit)
+            if (head.x == fruit.x && head.y == fruit.y)
             {
-                u32 x, y;
-                do
+                while (head.x == fruit.x && head.y == fruit.y)
                 {
-                    x = rng() % width;
-                    y = rng() % height;
+                    fruit.x = (i32)(rng() % width);
+                    fruit.y = (i32)(rng() % height);
                 }
-                while (points[x][y] == Point_snake);
-                points[x][y] = Point_fruit;
+
+                *hgArrayPush(&snake) = head;
             }
             else
             {
-                Snake tail = hgQueuePopFront(&snake);
-                points[tail.x][tail.y] = Point_empty;
+                for (u32 i = 0; i < snake.count - 1; ++i)
+                {
+                    if (snake[i].x == head.x && snake[i].y == head.y)
+                        goto quit;
+
+                    snake[i] = snake[i + 1];
+                }
+                snake[snake.count - 1] = head;
             }
 
             hgLayerClear2D(&snakeLayer);
 
-            for (u32 x = 0; x < width; ++x)
+            for (u32 i = 0; i < snake.count; ++i)
             {
-                for (u32 y = 0; y < height; ++y)
-                {
-                    if (points[x][y] == Point_empty)
-                    {
-                        continue;
-                    }
-                    else if (points[x][y] == Point_snake)
-                    {
-                        hgDrawRect2D(&snakeLayer, HgVec4{0, 1, 0, 1}, {HgVec2{(f32)x, (f32)y}, HgVec2{1, 1}});
-                    }
-                    else if (points[x][y] == Point_fruit)
-                    {
-                        hgDrawRect2D(&snakeLayer, HgVec4{1, 0, 0, 1}, {HgVec2{(f32)x, (f32)y}, HgVec2{1, 1}});
-                    }
-                }
+                hgDrawRect2D(&snakeLayer, HgVec4{0, 1, 0, 1}, {HgVec2{(f32)snake[i].x, (f32)snake[i].y}, HgVec2{1, 1}});
             }
+
+            hgDrawRect2D(&snakeLayer, HgVec4{1, 0, 0, 1}, {HgVec2{(f32)fruit.x, (f32)fruit.y}, HgVec2{1, 1}});
         }
 
         HgGpuCmd* cmd = hgGpuFrameBegin(&window, 1);

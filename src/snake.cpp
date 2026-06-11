@@ -2,8 +2,8 @@
 
 #include <random>
 
-u32 seed = std::random_device{}();
-u32 pos = 0;
+static u32 seed = std::random_device{}();
+static u32 pos = 0;
 
 static u32 rng() {
     return pos = hgNoise(seed, pos);
@@ -32,10 +32,10 @@ int main()
         Point_fruit,
     };
 
-    constexpr u32 width = 40;
-    constexpr u32 height = 30;
-    Point grid[width][height]{};
-    grid[rng() % width][rng() % height] = Point_fruit;
+    constexpr u32 width = 28;
+    constexpr u32 height = 21;
+    Point points[width][height]{};
+    points[rng() % width][rng() % height] = Point_fruit;
 
     struct Snake {
         i32 x, y;
@@ -59,18 +59,8 @@ int main()
         f64 delta = hgClockTick(&clock);
         hgProcessEvents();
 
-        bool tick = false;
-        timeTilTick -= delta;
-        if (timeTilTick < 0)
-        {
-            timeTilTick += speed;
-            tick = true;
-        }
-
         if (hgWasQuit() || hgWindowWasClosed(window))
             goto quit;
-
-        f32 aspect = (f32)hgWindowWidth(window) / (f32)hgWindowHeight(window);
 
         camera.type = HgCameraType_orthographic;
         camera.orthographic.left = 0;
@@ -80,17 +70,18 @@ int main()
         camera.orthographic.near = 0;
         camera.orthographic.far = 1;
 
-        f32 margin = aspect - 4.0f / 3.0f;
-        if (margin > 0)
+        f32 aspect = (f32)hgWindowWidth(window) / (f32)hgWindowHeight(window);
+        if (aspect > (f32)width / (f32)height)
         {
+            f32 margin = aspect - (f32)width / (f32)height;
             camera.orthographic.left -= margin * width / 2.0f;
             camera.orthographic.right += margin * width / 2.0f;
         }
-        else if (margin < 0)
+        else
         {
-            f32 topMargin = (f32)hgWindowHeight(window) / (f32)hgWindowWidth(window) - 3.0f / 4.0f;
-            camera.orthographic.top -= topMargin * height / 2.0f;
-            camera.orthographic.bottom += topMargin * height / 2.0f;
+            f32 margin = (f32)hgWindowHeight(window) / (f32)hgWindowWidth(window) - 3.0f / 4.0f;
+            camera.orthographic.top -= margin * height / 2.0f;
+            camera.orthographic.bottom += margin * height / 2.0f;
         }
 
         hgCameraUpdate(&camera);
@@ -128,8 +119,11 @@ int main()
             }
         }
 
-        if (tick)
+        timeTilTick -= delta;
+        if (timeTilTick < 0)
         {
+            timeTilTick += speed;
+
             head.x += head.vx;
             head.y += head.vy;
 
@@ -143,7 +137,14 @@ int main()
             else if (head.y >= (i32)height)
                 head.y -= (i32)height;
 
-            if (grid[head.x][head.y] == Point_fruit)
+            Point p = points[head.x][head.y];
+            if (p == Point_snake)
+                goto quit;
+
+            hgQueuePushBack(&snake, head);
+            points[head.x][head.y] = Point_snake;
+
+            if (p == Point_fruit)
             {
                 u32 x, y;
                 do
@@ -151,21 +152,14 @@ int main()
                     x = rng() % width;
                     y = rng() % height;
                 }
-                while (grid[x][y] == Point_snake);
-                grid[x][y] = Point_fruit;
-            }
-            else if (grid[head.x][head.y] == Point_snake)
-            {
-                goto quit;
+                while (points[x][y] == Point_snake);
+                points[x][y] = Point_fruit;
             }
             else
             {
                 Snake tail = hgQueuePopFront(&snake);
-                grid[tail.x][tail.y] = Point_empty;
+                points[tail.x][tail.y] = Point_empty;
             }
-
-            hgQueuePushBack(&snake, head);
-            grid[head.x][head.y] = Point_snake;
 
             hgLayerClear2D(&snakeLayer);
 
@@ -173,15 +167,15 @@ int main()
             {
                 for (u32 y = 0; y < height; ++y)
                 {
-                    if (grid[x][y] == Point_empty)
+                    if (points[x][y] == Point_empty)
                     {
                         continue;
                     }
-                    else if (grid[x][y] == Point_snake)
+                    else if (points[x][y] == Point_snake)
                     {
                         hgDrawRect2D(&snakeLayer, HgVec4{0, 1, 0, 1}, {HgVec2{(f32)x, (f32)y}, HgVec2{1, 1}});
                     }
-                    else if (grid[x][y] == Point_fruit)
+                    else if (points[x][y] == Point_fruit)
                     {
                         hgDrawRect2D(&snakeLayer, HgVec4{1, 0, 0, 1}, {HgVec2{(f32)x, (f32)y}, HgVec2{1, 1}});
                     }

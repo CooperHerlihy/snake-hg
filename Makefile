@@ -25,7 +25,7 @@ $(BUILD_DIR):
 	mkdir -p $@
 
 $(BUILD_DIR)/libhurdygurdy.a: | $(BUILD_DIR)
-	$(MAKE) -C $(SRC_DIR)/vendor/hurdygurdy
+	$(MAKE) -C $(SRC_DIR)/vendor/hurdygurdy CONFIG="$(CONFIG)"
 	cp $(SRC_DIR)/vendor/hurdygurdy/build/libhurdygurdy.a $(BUILD_DIR)/libhurdygurdy.a
 
 $(BUILD_DIR)/%.o: $(SRC_DIR)/src/%.cpp | $(BUILD_DIR)
@@ -36,6 +36,7 @@ $(BUILD_DIR)/%: $(BUILD_DIR)/%.o $(BUILD_DIR)/libhurdygurdy.a | $(BUILD_DIR)
 
 clean:
 	rm -rf $(BUILD_DIR)
+	$(MAKE) -C $(SRC_DIR)/vendor/hurdygurdy clean
 
 -include $(BUILD_DIR)/*.d
 

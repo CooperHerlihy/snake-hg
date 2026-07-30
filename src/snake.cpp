@@ -1,30 +1,21 @@
 #include "hurdygurdy.hpp"
 
-#include <random>
+using namespace hg;
 
-static u32 seed = std::random_device{}();
-static u32 pos = 0;
-
-static u32 rng() {
-    return pos = hgNoise(seed, pos);
-}
+static Rng rng{trueRandom()};
 
 int main()
 {
-    hgInit();
-    hgDefer(hgDeinit());
+    HurdyGurdy hg = init().expect("Could not initialize HurdyGurdy");
 
-    HgWindow* window = hgWindowCreate("Snake", 1200, 800, nullptr);
-    hgDefer(hgWindowDestroy(window));
+    Window window = Window::create("Snake", 1200, 800, {}).expect("Could not create window");
 
-    HgCamera camera = hgCameraCreate();
-    hgDefer(hgCameraDestroy(&camera));
+    Camera camera = Camera::create();
 
-    hgRendererInit2D(hgWindowImageFormat(window));
-    hgDefer(hgRendererDeinit2D());
+    initRenderer2D(window.imageFormat());
+    HG_DEFER(deinitRenderer2D());
 
-    HgLayer2D snakeLayer = hgLayerCreate2D();
-    hgDefer(hgLayerDestroy2D(&snakeLayer));
+    Layer2D snakeLayer = Layer2D::create();
 
     constexpr u32 width = 28;
     constexpr u32 height = 21;
@@ -36,30 +27,27 @@ int main()
     Point head{width / 2, height / 2};
     Point vel{1, 0};
 
-    Point fruit{(i32)(rng() % width), (i32)(rng() % height)};
+    Point fruit{(i32)(rng.next() % width), (i32)(rng.next() % height)};
 
-    HgArray<Point> snake = hgArrayCreate<Point>();
-    hgDefer(hgArrayDestroy(&snake));
-
-    *hgArrayPush(&snake) = head;
+    Array<Point> snake{};
+    snake.push(head);
 
     f64 speed = 0.08f;
     f64 timeTilTick = speed;
 
-    HgClock clock{};
-    hgClockTick(&clock);
+    Clock clock{};
     for (;;)
     {
-        f64 delta = hgClockTick(&clock);
-        hgProcessEvents();
+        f64 delta = clock.tick();
+        processEvents();
 
-        if (hgWasQuit() || hgWindowWasClosed(window))
+        if (wasQuit() || window.wasClosed())
             goto quit;
 
-        hgCameraSetOrthographic(&camera, width, height, (f32)hgWindowWidth(window) / (f32)hgWindowHeight(window));
-        hgCameraUpdate(&camera);
+        camera.setOrthographic(width, height, (f32)window.width() / (f32)window.height());
+        camera.update();
 
-        if (hgIsButtonDown(window, HgButton_w) || hgIsButtonDown(window, HgButton_up))
+        if (window.isButtonDown(Button_w) || window.isButtonDown(Button_up))
         {
             if (vel.y != 1)
             {
@@ -67,7 +55,7 @@ int main()
                 vel.y = -1;
             }
         }
-        else if (hgIsButtonDown(window, HgButton_a) || hgIsButtonDown(window, HgButton_left))
+        else if (window.isButtonDown(Button_a) || window.isButtonDown(Button_left))
         {
             if (vel.x != 1)
             {
@@ -75,7 +63,7 @@ int main()
                 vel.y = 0;
             }
         }
-        else if (hgIsButtonDown(window, HgButton_s) || hgIsButtonDown(window, HgButton_down))
+        else if (window.isButtonDown(Button_s) || window.isButtonDown(Button_down))
         {
             if (vel.y != -1)
             {
@@ -83,7 +71,7 @@ int main()
                 vel.y = 1;
             }
         }
-        else if (hgIsButtonDown(window, HgButton_d) || hgIsButtonDown(window, HgButton_right))
+        else if (window.isButtonDown(Button_d) || window.isButtonDown(Button_right))
         {
             if (vel.x != -1)
             {
@@ -114,11 +102,10 @@ int main()
             {
                 while (head.x == fruit.x && head.y == fruit.y)
                 {
-                    fruit.x = (i32)(rng() % width);
-                    fruit.y = (i32)(rng() % height);
+                    fruit.x = (i32)(rng.next() % width);
+                    fruit.y = (i32)(rng.next() % height);
                 }
-
-                *hgArrayPush(&snake) = head;
+                snake.push(head);
             }
             else
             {
@@ -132,35 +119,37 @@ int main()
                 snake[snake.count - 1] = head;
             }
 
-            hgLayerClear2D(&snakeLayer);
+            snakeLayer.clear();
 
             for (u32 i = 0; i < snake.count; ++i)
             {
-                hgDrawRect2D(&snakeLayer, HgVec4{0, 1, 0, 1}, {HgVec2{(f32)snake[i].x, (f32)snake[i].y}, HgVec2{1, 1}});
+                Vec2 pos = {(f32)snake[i].x, (f32)snake[i].y};
+                snakeLayer.drawRect({0, 1, 0, 1}, {pos, pos + Vec2{1}});
             }
 
-            hgDrawRect2D(&snakeLayer, HgVec4{1, 0, 0, 1}, {HgVec2{(f32)fruit.x, (f32)fruit.y}, HgVec2{1, 1}});
+            Vec2 pos = {(f32)fruit.x, (f32)fruit.y};
+            snakeLayer.drawRect({1, 0, 0, 1}, {pos, pos + Vec2{1}});
         }
 
-        HgGpuCmd* cmd = hgGpuFrameBegin(&window, 1);
-        if (hgWindowImageView(window) != nullptr)
+        Window* windows[] = {&window};
+        GpuCmd* cmd = gpuFrameBegin(windows);
+        if (window.imageView() != nullptr)
         {
-            HgGpuRenderAttachment windowAttachment{};
-            windowAttachment.image = hgWindowImageView(window);
+            GpuRenderAttachment windowAttachment{};
+            windowAttachment.image = window.imageView();
 
-            HgGpuRenderPass pass{};
-            pass.colorAttachments = &windowAttachment;
-            pass.colorAttachmentCount = 1;
+            GpuRenderPass pass{};
+            pass.colorAttachments = {&windowAttachment, 1};
 
-            hgGpuRenderPassBegin(cmd, &pass);
+            gpuRenderPassBegin(cmd, pass);
 
-            hgRenderLayer2D(cmd, &camera, &snakeLayer);
+            snakeLayer.render(cmd, &camera);
 
-            hgGpuRenderPassEnd(cmd);
+            gpuRenderPassEnd(cmd);
         }
-        hgGpuFrameEnd(cmd);
+        gpuFrameEnd(cmd);
     }
 quit:
-    hgGpuWaitIdle();
+    gpuWaitIdle();
 }
 

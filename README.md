@@ -6,24 +6,22 @@ Snake, written to test basic usage of Hurdy Gurdy 2D
 
 ## Build
 
-### Linux
-
 Dependencies:
-- Make
-- C++ compiler (GCC or Clang)
-- GLSL compiler (glslc)
-- SDL3
-- Vulkan Validation Layers (debug mode)
+- CMake
+- Ninja
+- Optional: Mold
+- Optional: CCache
+- C++ compiler (GCC, Clang, or msvc)
+- Optional: SDL3 (for hurdygurdy, can compile from scratch if not found)
+- Linux:
+    - GLSL compiler (glslc)
+    - Vulkan Validation Layers (for hurdygurdy debug mode)
+- Windows:
+    - Lunarg Vulkan SDK (includes glslc and validation layers)
 
-To build, run make:
+To build, run cmake:
 
 ```bash
-make
-```
-
-To build in release mode, add `release` when running make:
-
-```bash
-make release
+cmake --workflow --preset debug
 ```
 

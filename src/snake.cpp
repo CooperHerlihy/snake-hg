@@ -185,8 +185,6 @@ struct GameOver {
 
 int main()
 {
-    HG_LOG("begun\n");
-
     HurdyGurdy hg = init().expect("Could not initialize HurdyGurdy");
 
     Window window = Window::create("Snake", 1200, 800).expect("Could not create window");
@@ -199,8 +197,6 @@ int main()
  
     State state = State_title;
 
-    HG_LOG("finished init\n");
-
     Clock clock{};
     for (;;)
     {
@@ -208,28 +204,19 @@ beginFrame:
         f64 delta = clock.tick();
         processEvents();
 
-        HG_LOG("processed events\n");
-
         if (wasQuit() || window.wasClosed())
             goto quit;
 
-        HG_LOG("did not quit\n");
-
         camera.setOrthographic(width, height, (f32)window.width() / (f32)window.height());
         camera.update();
-
-        HG_LOG("update camera\n");
 
         switch (state)
         {
         case State_title:
         {
-            HG_LOG("state title\n");
             state = title.update(renderer, window);
-            HG_LOG("updated title\n");
             if (state != State_title)
                 goto beginFrame;
-            HG_LOG("state remains title\n");
         } break;
         case State_game:
         {
@@ -244,8 +231,6 @@ beginFrame:
                 goto beginFrame;
         } break;
         }
-
-        HG_LOG("updated\n");
 
         Window* windows[] = {&window};
         GpuCmd* cmd = gpuBeginFrame(windows);
@@ -264,12 +249,8 @@ beginFrame:
             gpuEndRenderPass(cmd);
         }
         gpuEndFrame(cmd);
-
-        HG_LOG("renderer\n");
     }
 quit:
     gpuWaitIdle();
-
-    HG_LOG("quit\n");
 }
 

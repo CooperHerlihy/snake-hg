@@ -29,7 +29,7 @@ struct Title {
             height / 35.0f);
     }
 
-    State update(const Window& window, Renderer2D& renderer)
+    State update(Renderer2D& renderer, const Window& window)
     {
         if (window.isButtonDown(Button_space))
             return State_game;
@@ -61,7 +61,7 @@ struct Game {
         snake.push(head);
     }
 
-    State update(const Window& window, Renderer2D& renderer, f64 delta)
+    State update(Renderer2D& renderer, const Window& window, f64 delta)
     {
         if (window.isButtonDown(Button_w) || window.isButtonDown(Button_up))
         {
@@ -128,7 +128,10 @@ struct Game {
                 for (u32 i = 0; i < snake.count - 1; ++i)
                 {
                     if (snake[i].x == head.x && snake[i].y == head.y)
+                    {
+                        *this = {};
                         return State_gameOver;
+                    }
 
                     snake[i] = snake[i + 1];
                 }
@@ -169,7 +172,7 @@ struct GameOver {
             height / 35.0f);
     }
 
-    State update(const Window& window, Renderer2D& renderer)
+    State update(Renderer2D& renderer, const Window& window)
     {
         if (window.isButtonDown(Button_space))
             return State_game;
@@ -182,6 +185,8 @@ struct GameOver {
 
 int main()
 {
+    HG_LOG("begun\n");
+
     HurdyGurdy hg = init().expect("Could not initialize HurdyGurdy");
 
     Window window = Window::create("Snake", 1200, 800).expect("Could not create window");
@@ -191,8 +196,10 @@ int main()
     Title title{};
     Game game{};
     GameOver gameOver{};
-
+ 
     State state = State_title;
+
+    HG_LOG("finished init\n");
 
     Clock clock{};
     for (;;)
@@ -201,42 +208,44 @@ beginFrame:
         f64 delta = clock.tick();
         processEvents();
 
+        HG_LOG("processed events\n");
+
         if (wasQuit() || window.wasClosed())
             goto quit;
 
+        HG_LOG("did not quit\n");
+
         camera.setOrthographic(width, height, (f32)window.width() / (f32)window.height());
         camera.update();
+
+        HG_LOG("update camera\n");
 
         switch (state)
         {
         case State_title:
         {
-            state = title.update(window, renderer);
+            HG_LOG("state title\n");
+            state = title.update(renderer, window);
+            HG_LOG("updated title\n");
             if (state != State_title)
-            {
-                if (state == State_game)
-                    game = {};
                 goto beginFrame;
-            }
+            HG_LOG("state remains title\n");
         } break;
         case State_game:
         {
-            state = game.update(window, renderer, delta);
+            state = game.update(renderer, window, delta);
             if (state != State_game)
-            {
                 goto beginFrame;
-            }
         } break;
         case State_gameOver:
-            state = gameOver.update(window, renderer);
+        {
+            state = gameOver.update(renderer, window);
             if (state != State_gameOver)
-            {
-                if (state == State_game)
-                    game = {};
                 goto beginFrame;
-            }
-            break;
+        } break;
         }
+
+        HG_LOG("updated\n");
 
         Window* windows[] = {&window};
         GpuCmd* cmd = gpuBeginFrame(windows);
@@ -255,8 +264,12 @@ beginFrame:
             gpuEndRenderPass(cmd);
         }
         gpuEndFrame(cmd);
+
+        HG_LOG("renderer\n");
     }
 quit:
     gpuWaitIdle();
+
+    HG_LOG("quit\n");
 }
 

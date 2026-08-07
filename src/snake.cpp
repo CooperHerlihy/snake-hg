@@ -1,52 +1,68 @@
-#include "hurdygurdy.hpp"
+#include <hurdygurdy.hpp>
 
 using namespace hg;
 
-static Rng rng{trueRandom()};
+enum State {
+    State_title,
+    State_game,
+    State_gameOver,
+};
 
-int main()
-{
-    HurdyGurdy hg = init().expect("Could not initialize HurdyGurdy");
+constexpr u32 width = 28;
+constexpr u32 height = 21;
 
-    Window window = Window::create("Snake", 1200, 800, {}).expect("Could not create window");
+Rng rng{trueRandom()};
 
-    Camera camera = Camera::create();
+struct Title {
+    Layer2D layer{};
 
-    initRenderer2D(window.imageFormat());
-    HG_DEFER(deinitRenderer2D());
+    Title() noexcept
+    {
+        layer.drawText(
+            "Snake",
+            getDefaultFont(),
+            Vec4{1},
+            {
+                {width / 2.0f - 8.0f, height / 4.0f},
+                {INFINITY, height / 2.0f}
+            },
+            height / 35.0f);
+    }
 
-    Layer2D snakeLayer = Layer2D::create();
+    State update(const Window& window, Renderer2D& renderer)
+    {
+        if (window.isButtonDown(Button_space))
+            return State_game;
 
-    constexpr u32 width = 28;
-    constexpr u32 height = 21;
+        renderer.queueLayer(layer);
 
-    struct Point {
-        i32 x, y;
-    };
+        return State_title;
+    }
+};
 
-    Point head{width / 2, height / 2};
-    Point vel{1, 0};
+struct Point {
+    i32 x, y;
+};
 
-    Point fruit{(i32)(rng.next() % width), (i32)(rng.next() % height)};
-
-    Array<Point> snake{};
-    snake.push(head);
-
-    f64 speed = 0.08f;
+struct Game {
+    static constexpr f64 speed = 0.08f;
     f64 timeTilTick = speed;
 
-    Clock clock{};
-    for (;;)
+    Layer2D layer{};
+
+    Point fruit = {(i32)(rng.next() % width), (i32)(rng.next() % height)};
+    Point head = {width / 2, height / 2};
+    Point vel = {1, 0};
+
+    Array<Point> snake{};
+
+    Game() noexcept
     {
-        f64 delta = clock.tick();
-        processEvents();
+        snake.push(head);
+    }
 
-        if (wasQuit() || window.wasClosed())
-            goto quit;
-
-        camera.setOrthographic(width, height, (f32)window.width() / (f32)window.height());
-        camera.update();
-
+    State update(const Window& window, Renderer2D& renderer, f64 delta)
+    {
         if (window.isButtonDown(Button_w) || window.isButtonDown(Button_up))
         {
             if (vel.y != 1)
@@ -112,42 +128,133 @@ int main()
                 for (u32 i = 0; i < snake.count - 1; ++i)
                 {
                     if (snake[i].x == head.x && snake[i].y == head.y)
-                        goto quit;
+                        return State_gameOver;
 
                     snake[i] = snake[i + 1];
                 }
                 snake[snake.count - 1] = head;
             }
 
-            snakeLayer.clear();
+            layer.clear();
 
             for (u32 i = 0; i < snake.count; ++i)
             {
                 Vec2 pos = {(f32)snake[i].x, (f32)snake[i].y};
-                snakeLayer.drawRect({0, 1, 0, 1}, {pos, pos + Vec2{1}});
+                layer.drawRect({0, 1, 0, 1}, {pos, pos + Vec2{1}});
             }
 
             Vec2 pos = {(f32)fruit.x, (f32)fruit.y};
-            snakeLayer.drawRect({1, 0, 0, 1}, {pos, pos + Vec2{1}});
+            layer.drawRect({1, 0, 0, 1}, {pos, pos + Vec2{1}});
+        }
+
+        renderer.queueLayer(layer);
+
+        return State_game;
+    }
+};
+
+struct GameOver {
+    Layer2D layer{};
+
+    GameOver() noexcept
+    {
+        layer.drawText(
+            "Game Over",
+            getDefaultFont(),
+            Vec4{1},
+            {
+                {width / 2.0f - 8.0f, height / 4.0f},
+                {INFINITY, height / 2.0f}
+            },
+            height / 35.0f);
+    }
+
+    State update(const Window& window, Renderer2D& renderer)
+    {
+        if (window.isButtonDown(Button_space))
+            return State_game;
+
+        renderer.queueLayer(layer);
+
+        return State_gameOver;
+    }
+};
+
+int main()
+{
+    HurdyGurdy hg = init().expect("Could not initialize HurdyGurdy");
+
+    Window window = Window::create("Snake", 1200, 800).expect("Could not create window");
+    Renderer2D renderer{window.imageFormat()};
+    Camera camera{};
+
+    Title title{};
+    Game game{};
+    GameOver gameOver{};
+
+    State state = State_title;
+
+    Clock clock{};
+    for (;;)
+    {
+beginFrame:
+        f64 delta = clock.tick();
+        processEvents();
+
+        if (wasQuit() || window.wasClosed())
+            goto quit;
+
+        camera.setOrthographic(width, height, (f32)window.width() / (f32)window.height());
+        camera.update();
+
+        switch (state)
+        {
+        case State_title:
+        {
+            state = title.update(window, renderer);
+            if (state != State_title)
+            {
+                if (state == State_game)
+                    game = {};
+                goto beginFrame;
+            }
+        } break;
+        case State_game:
+        {
+            state = game.update(window, renderer, delta);
+            if (state != State_game)
+            {
+                goto beginFrame;
+            }
+        } break;
+        case State_gameOver:
+            state = gameOver.update(window, renderer);
+            if (state != State_gameOver)
+            {
+                if (state == State_game)
+                    game = {};
+                goto beginFrame;
+            }
+            break;
         }
 
         Window* windows[] = {&window};
-        GpuCmd* cmd = gpuFrameBegin(windows);
+        GpuCmd* cmd = gpuBeginFrame(windows);
         if (window.imageView() != nullptr)
         {
-            GpuRenderAttachment windowAttachment{};
-            windowAttachment.image = window.imageView();
+            GpuRenderAttachment colorAttachment{};
+            colorAttachment.image = window.imageView();
 
             GpuRenderPass pass{};
-            pass.colorAttachments = {&windowAttachment, 1};
+            pass.colorAttachments = {&colorAttachment, 1};
 
-            gpuRenderPassBegin(cmd, pass);
+            gpuBeginRenderPass(cmd, pass);
 
-            snakeLayer.render(cmd, &camera);
+            renderer.render(cmd, camera);
 
-            gpuRenderPassEnd(cmd);
+            gpuEndRenderPass(cmd);
         }
-        gpuFrameEnd(cmd);
+        gpuEndFrame(cmd);
     }
 quit:
     gpuWaitIdle();

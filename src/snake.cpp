@@ -18,15 +18,12 @@ struct Title {
 
     Title() noexcept
     {
-        layer.drawText(
-            "Snake",
-            getDefaultFont(),
-            Vec4{1},
-            {
-                {width / 2.0f - 8.0f, height / 4.0f},
-                {INFINITY, height / 2.0f}
-            },
-            height / 35.0f);
+        layer.drawText("Snake", Vec4{1}, TextBuilder{getDefaultFont()}
+            .setBottomCenter({width / 2.0f, height / 2.0f})
+            .setBounds(width, height / 2.0f));
+        layer.drawText("Press SPACE to play", Vec4{1}, TextBuilder{getDefaultFont()}
+            .setTopCenter({width / 2.0f, height / 2.0f})
+            .setBounds(width * 0.8f, height / 2.0f));
     }
 
     State update(Renderer2D& renderer, const Window& window)
@@ -161,15 +158,12 @@ struct GameOver {
 
     GameOver() noexcept
     {
-        layer.drawText(
-            "Game Over",
-            getDefaultFont(),
-            Vec4{1},
-            {
-                {width / 2.0f - 8.0f, height / 4.0f},
-                {INFINITY, height / 2.0f}
-            },
-            height / 35.0f);
+        layer.drawText("Game Over", Vec4{1}, TextBuilder{getDefaultFont()}
+            .setBottomCenter({width / 2.0f, height / 2.0f})
+            .setBounds(width, height));
+        layer.drawText("Press SPACE to play again", Vec4{1}, TextBuilder{getDefaultFont()}
+            .setTopCenter({width / 2.0f, height / 2.0f})
+            .setBounds(width * .8f, height));
     }
 
     State update(Renderer2D& renderer, const Window& window)

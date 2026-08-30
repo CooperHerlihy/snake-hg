@@ -20,10 +20,10 @@ struct Title {
     {
         layer.drawText("Snake", Vec4{1}, TextBuilder{getDefaultFont()}
             .setBottomCenter({width / 2.0f, height / 2.0f})
-            .setBounds(width, height / 2.0f));
+            .setBounds(width, height / 4.0f));
         layer.drawText("Press SPACE to play", Vec4{1}, TextBuilder{getDefaultFont()}
             .setTopCenter({width / 2.0f, height / 2.0f})
-            .setBounds(width * 0.8f, height / 2.0f));
+            .setBounds(width * 0.8f, height / 4.0f));
     }
 
     State update(Renderer2D& renderer, const Window& window)
@@ -160,10 +160,10 @@ struct GameOver {
     {
         layer.drawText("Game Over", Vec4{1}, TextBuilder{getDefaultFont()}
             .setBottomCenter({width / 2.0f, height / 2.0f})
-            .setBounds(width, height));
+            .setBounds(width, height / 4.0f));
         layer.drawText("Press SPACE to play again", Vec4{1}, TextBuilder{getDefaultFont()}
             .setTopCenter({width / 2.0f, height / 2.0f})
-            .setBounds(width * .8f, height));
+            .setBounds(width * .8f, height / 4.0f));
     }
 
     State update(Renderer2D& renderer, const Window& window)
@@ -188,7 +188,7 @@ int main()
     Title title{};
     Game game{};
     GameOver gameOver{};
- 
+
     State state = State_title;
 
     Clock clock{};

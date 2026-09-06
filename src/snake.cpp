@@ -161,6 +161,7 @@ struct GameOver {
         layer.drawText("Game Over", Vec4{1}, TextBuilder{getDefaultFont()}
             .setBottomCenter({width / 2.0f, height / 2.0f})
             .setBounds(width, height / 4.0f));
+
         layer.drawText("Press SPACE to play again", Vec4{1}, TextBuilder{getDefaultFont()}
             .setTopCenter({width / 2.0f, height / 2.0f})
             .setBounds(width * .8f, height / 4.0f));
@@ -181,7 +182,9 @@ int main()
 {
     HurdyGurdy hg = init().expect("Could not initialize HurdyGurdy");
 
-    Window window = Window::create("Snake", 1200, 800).expect("Could not create window");
+    Window window = Window::create().expect("Could not create window");
+    window.setTitle("Snake");
+
     Renderer2D renderer{window.imageFormat()};
     Camera camera{};
 
